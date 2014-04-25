@@ -1,16 +1,23 @@
 #Advanced Guide to Modules: Types & Providers
 
 ##Introduction
-Types and providers are at the heart of Puppet's workflow, as they outline the
-"how to" and  Puppet does the "what". T&Ps over execs/defines because T&Ps are
-the heart of state-definition rather than trying to force the how to.Types and
-providers are puppet resources, written in Ruby, that enable you to extend
-Puppet to manage new kinds of resources on systems. They are best used in
-modules to handle complex logic that would be difficult to model with `exec`,
-or for functionality that requires a real programming language to accomplish.
-For instance,  a provider that connects to a real database to retrieve
-information, which would be impossible within Puppet’s DSL, is best set up
-using a type and provider.
+
+Types and providers are the heart of how Puppet works.  They allow you to
+express the "how to do something" through raw commands, outside of the
+constraints of the Puppet DSL.  With that information Puppet can then figure
+out how to transistion from what you have to what you want.   They are written
+in Ruby, like Puppet.
+
+Types and providers are preferred over execs and definitions due the ability to
+do things difficult within the Puppet DSL.  It's not possible to read the
+results of an exec{} and do different things based on that output.  They are
+also ideally suited for other forms of complex logic that is difficult to
+manage within the constraints of the DSL.  For instance,  a provider that
+
+An example of this is a provider that manages local redis instances.  It would
+need to make an actual TCP connection to the database to retrieve the current
+state of the properties you wish to manage with Puppet.  This would be impossible
+within the DSL and therefore modelled as a type and provider.
 
 To highlight these practices, we will expand the basic ssh module we built in
 the [previous section](link to Classes, Params, and APIs) to add a type and
