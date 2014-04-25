@@ -177,7 +177,7 @@ need.
 
 We’ll start by creating some skeleton classes for our module so we
 have a place to manage packages from.  The below tree output shows the
-tree of classes for both client and server installation.
+tree of classes for both client and manifests server.
 
 ```
 $ tree
@@ -206,7 +206,9 @@ class ssh::client (
   contain ssh::client::install
 
 }
+```
 
+```puppet
 class ssh::server(
   $package_ensure            = $ssh::params::server_package_ensure,
   $package_name              = $ssh::params::server_package_name,
