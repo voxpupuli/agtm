@@ -26,49 +26,61 @@ provider to support the creation of ssh tunnels, as well as SOCKS proxies.
 ###Types & Providers vs. Defines
 
 It would not be unusual to model something like ssh tunnels or SOCKS proxies
-within a `define` in Puppet, to allow the support of more than one.  However,
-this rarely works in practice because of the complexities of managing the
-underlying system state is difficult to define with only Exec.  You cannot do
-sophisticated logic easily, being limited to exit code checking and shell
-commands. 
+within a definition in Puppet to allow the creation of multiple instances.  While
+this may work in the most simplistic of cases it usually breaks down in production
+quality modules due to the complexities of managing the underlying system state
+with the limitations of `exec{}`.  You cannot do sophisicated logic easily and
+are limited to chaining together `exec{}` resources to try and do various things
+based on exit codes and shell commands.
 
 To most effectively model ssh tunnels and SOCKS proxies using types and
 providers, we must be able to:
 
 * Create an SSH tunnel based on various parameters.
-* Validate the parameters to make sure they conform to the needs of the command that ran to build the tunnel.
+* Validate the parameters to make sure they conform to the needs of the command
+  that runs to build the tunnel.
 * Test if a tunnel is running and only start it if not.
 * Close an SSH tunnel if `ensure => absent` is set.
 
-Because `exec{}` resources are just simple wrappers for shell commands, it
-would be extremely complex to model the workflow of an SSH tunnel and SOCKS
-proxy using one. In order to successfully use an `exec{}` resource in this
-case, all of the logic of closing tunnels, testing the processes, and tracking
-the existing processes within Puppet would need to be modeled within the
-`define`. The logic models would require many `exec{}` statements and facts to
-try querying the existing state of the machine, since there is no way within
-Puppet to run an exec and use the results in another execYou'd need many exec{}
-statements as well as facts in order to try and query the existing state of the
-machine (as there's no way within Puppet to run an exec and then use the
-results in another exec) because we can only declare the end state, not the
-method of getting there (which is what a t&p does, it does all the getting
-there steps) Does that help?
+Because `exec{}` resources are just simple wrappers for shell
+commands, it would be extremely complex to model the workflow of an
+SSH tunnel and SOCKS proxy using one. In order to successfully use an
+`exec{}` resource in this case, all of the logic of closing tunnels,
+testing the processes, and tracking the existing processes within
+Puppet would need to be modeled within the `definition`. The logic
+model would require many `exec{}` statements and custom facts to try
+and query the existing state of the machine, as there is no easy way
+within Puppet to use the results of an `exec{}` statement within
+another `exec{}` statement.  This is because Puppet is intended to
+declare the end state, not the steps required to reach the end state.
+That's the entire purpose of a type and provider, to handle the step
+by step actions to transition between states.
 
-`unless => ‘ps auxww | grep “-L ${local_port}:${forward_host}:${forward_port}”’`
+To provide a concrete example of what this might look like, here is an
+example `unless` property of a hypothetical exec{} to manage ssh tunnels.
 
-in an attempt to stop duplicate tunnels being started.  You’d have to ensure
-you handle -D as well for SOCKS proxies, and this would make the logic complex.
+```puppet
+unless => ‘ps auxww | grep “-L ${local_port}:${forward_host}:${forward_port}”’`
+```
 
-In addition this wouldn’t work in the face of a slightly tweaked resource.  If
-you simply changed the port you passed in it would create a second, separate,
-tunnel.  You would have to keep the original tunnel definition, change ensure
-=> to absent, and then create the new one.
+This would attempt to stop duplicate tunnels being started.  It has a
+number of problems, being unable to handle systems that don't take
+'auxww' as arguments to ps. You’d also have to ensure you handle -D as
+well for SOCKS proxies, and this would make the logic complex.
 
-The validation of the parameters would have to be done with various functions
-within the manifest.  None of this is impossible, but you’d end up with a
-difficult to reuse define.  Moreover, it would be tied very specifically to the
-implementation and it would be difficult to extend it for various different
-systems and use cases.
+This also wouldn't work if you wanted to change one of the properties of the
+definition.  If you changed the port you passed into the resource it would be
+unable to find the previous tunnel anymore thanks to the change in the grep
+string.  It would then create a second tunnel.  You would have to keep every
+tunnel definition you created, changing the ensure parameter to absent, and
+never reuse names to ensure it correctly managed them all.
+
+In addition to the above problems the validation of the parameters
+would have to be done with various functions within the manifest.
+None of this is impossible, but you’d end up with a difficult to reuse
+define.  Moreover, it would be tied very specifically to the
+implementation and it would be difficult to extend it for various
+different systems and use cases.
 
 As you’re reading the types and providers section you can correctly infer that
 we recommend the use of types and providers for this kind of functionality
