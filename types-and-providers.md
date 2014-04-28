@@ -82,22 +82,22 @@ define.  Moreover, it would be tied very specifically to the
 implementation and it would be difficult to extend it for various
 different systems and use cases.
 
-As you’re reading the types and providers section you can correctly infer that
-we recommend the use of types and providers for this kind of functionality
-[Change this to point back to the beginning of this section: We strongly
-recommend using types and providers for X] .  Types and providers open up the
-full power of Ruby on the agent, allow for multiple providers to serve as the
-backends to a single type, and moreover, allow you to control resources
-directly from the CLI with `puppet resource` or from an orchestration system
-like MCollective.  In the ssh module, using types and providers  allows us to
-easily audit SSH tunnels across the entire infrastructure, while also opening
-up more sophisticated use cases than simple execs{} can generate.
+As you’re reading the types and providers section you can correctly
+infer that we recommend the use of types and providers for this kind
+of functionality [link-to-start].  Types and providers open up the
+full power of Ruby on the agent, allow for multiple providers to serve
+as the backends to a single type, and moreover, allow you to control
+resources directly from the CLI with `puppet resource` or from an
+orchestration system like MCollective.  In the ssh module, using types
+and providers allows us to easily audit SSH tunnels across the entire
+infrastructure, while also opening up more sophisticated use cases
+than simple execs{} can generate.
 
-NOTE (ideally this should be in a box of some kind): [Types and
-Providers](http://www.amazon.com/Puppet-Types-Providers-Dan-Bode/dp/1449339328?tag=88fd3e53f8c9c-20),
-is the best reference material available for writing types and providers.  It
-covers all the pieces of functionality we’ll use below in vastly more detail
-and is an invaluable guide.
+NOTE (ideally this should be in a box of some kind):
+[Types and Providers](http://www.amazon.com/Puppet-Types-Providers-Dan-Bode/dp/1449339328?tag=88fd3e53f8c9c-20),
+is the best reference material available for writing types and
+providers.  It covers all the pieces of functionality we’ll use below
+in vastly more detail and is an invaluable guide.
 
 
 ###Intro to SSH Tunnels
@@ -111,7 +111,7 @@ to a destination.  An example of this might be:
 ssh -L 8080:localhost:80 user@remoteserver
 ```
 
-Running `ssh -L` would send any traffic from 8080on your machine to the local
+Running `ssh -L` would send any traffic from 8080 on your machine to the local
 port 80 on user@remotewebserver. Or, rather than localhost, you could use
 another hostname to have ‘remoteserver’ act as a kind of proxy for your
 traffic.  You can even use ssh tunneling to set up a SOCKS proxy in order to
@@ -121,19 +121,19 @@ forward traffic of all kinds:
 ssh -D 8080 user@remoteserver
 ```
 
-SSH tunnels can get weird quickly. There are some great guides/references HERE
+For further reading on SSH tunnels you can [TODO: find a resource]
 
 ##Type
 
-Types are the code that represents the resource description.  They list out all
-the parameters that are required, their validation, any munging (forcing passed
-in parameters to conform to certain needs, like forcing everything to be
-lowercase.)  They are written in Ruby and placed in
-lib/puppet/type/type_name.rb. Best practices recommend using types
-TO/AS/FOR/SOMETHING.
+Types represent the resource description.  They list out all the
+parameters that are required, their validation, any munging (forcing
+passed in parameters to conform to certain needs, like forcing
+everything to be lowercase.), or special casing of how the parameters
+discovered on the system are compared to the required ones.  They are
+written in Ruby and placed in lib/puppet/type/type_name.rb. 
 
-In our ssh module, we’re going to write `ssh_tunnel`, a type that sets up
-tunnels.   We have two use cases we want to target for now, one is:
+In our ssh module, we’re going to write `ssh_tunnel`, a type that sets
+up tunnels.  We have two use cases we want to target for now, one is:
 
 ```
 ssh_tunnel { ‘bypass firewall’:
@@ -161,20 +161,19 @@ This means that our required parameters are `remote_server`, `local_port`, and
 
 ###Demonstration
 
-Type declarations ARE ZZZ and ARE USED FOR/TO. Best practices recommend/state
-you should/must do X AND Y AND Z when declaring types. 
+Type declarations declare the name of the resource we're creating.
+Best practices recommend that you try to keep the name short and
+sweet.
 
-In our ssh module, we begin with a simple type declaration at the top. To write
-your own types, you just need to change ':ssh_tunnel' to ':type_name' and then
-update @doc.
+In our ssh module, we begin with a simple type declaration at the
+top. To write your own types, you just need to change ':ssh_tunnel' to
+':type_name' and then update @doc to contain an appropriate
+documentation string.
 
 ```
 Puppet::Type.newtype(:ssh_tunnel) do
   @doc = 'Manage SSH tunnels'
 ```
-X
-
-
 
 Type validations ACCOMPLISH X and SHOULD/MUST BE USED IN Z WAY/FOR Y PURPOSE.
 Validation has two sorts (I will fix that word later): regular  and global.
@@ -182,13 +181,23 @@ Regular validation, referred to as simply 'validation', does/is used to X.
 Global validation does/is used to Y. Best practices HAS SOME THOUGHTS ABOUT
 WHAT'S BEST.
 
-First we'll look at  some global validation in our ssh module. X  We do this by
-calling the validate method and passing it a block of things to test.  In our
-type we just need to make sure that `forward_server` and `forward_port` are set
-if we’re not in SOCKS mode.
+Type validations allow you to verify that the contents of your
+resource parameters conform to various validation rules.  There are
+two sorts of validation, parameter and global.  Parameter validation,
+referred to as simply 'validation' is for inspecting and verifying the
+contents of a single parameter.  Global validation can be used to
+ensure that multiple parameters conform.  An example might be making
+sure that two conflicting parameters are never set together.  Best
+practices recommends validating as much of your potential input as
+possible.
 
-If either of these conditions aren’t true, we call fail() with a reason. [Intro
-to what this code is, what it's doing, and where it goes.]
+First we'll look at some global validation in our ssh module. We do
+this by calling the validate method and passing it a block of things
+to test.  In our type we just need to make sure that `forward_server`
+and `forward_port` are set if we’re not in SOCKS mode.
+
+If either of these conditions aren’t true, we call fail() with a
+reason.
 
 ```
   validate do
@@ -200,46 +209,45 @@ to what this code is, what it's doing, and where it goes.]
   end
 ```
 
-The nice thing about writing a type/provider vs a definition within a manifest
-is that Puppet has a bunch of helper code to make certain common things easier.
-For instance, calling the ‘ensurable’ method gives us automatic 'ensure =>
-present/absent' handling with automatic validation. Puppet also knows how to
-use various methods we’ll define in the provider to test for the presence of
-the resource on the local system so as to make sure it won’t do anything if the
-resource is correct.
-
+One benefit to writing a type and provider is that there are various
+helper methods that make common tasks easier.  When we call ensurable
+it'll automatically create an ensure property with appropriate
+validation handling.
 
 ```
   # This automatically creates the ensure parameter.
   ensurable
 ```
 
-Next, we create our first “parameter”.  Puppet distinguishes between properties
-and parameters, and the difference is just that properties can be managed and
-discovered from the system, whereas parameters aren’t discoverable and can’t be
-managed.  In our type the name is really not something you “manage” on the
-local system, it’s just a reference point for Puppet.  That means it’s a
-parameter, not a property.
+Next, we create our first “parameter”.  Puppet distinguishes between
+properties and parameters, and the difference is just that properties
+can be managed and discovered from the system, whereas parameters
+aren’t discoverable and can’t be managed.  In our type the name is
+really not something you “manage” on the local system, it’s just a
+reference point for Puppet.  That means it’s a parameter, not a
+property.
 
-In order to allow this type to work with `puppet resource` we’ll need to define
-some way for Puppet to automatically name discovered resources.  [Therefore, we
-must DO X ACTION. X ACTION accomplishes Y by Z.] This means that Puppet will
-take something like:
+In order to allow this type to work with `puppet resource` we’ll need
+to define some way for Puppet to automatically name discovered
+resources.  The provider we create after the type will be able to
+discover the existing instances that were created on the machine, such
+as:
 
 ```
 ssh -L 8080:localhost:80 user@remote
 ```
 
-And give it an appropriate name like:
+It'll then translate that into an appropriate name value such as:
 
 ```
 ssh_tunnel { ‘8080:localhost:80-user@remote’: }
 ```
 
-This is a little clumsy but we need the name to be unique, and changing any of
-the information about the tunnel means it’s a completely new one.  For other
-kinds of resources it’s easier to provide a short and memorable name, as only
-the properties change and there’s a static name to refer to (like package{}).
+This is a little clumsy but we need the name to be unique, and
+changing any of the information about the tunnel means it’s a
+completely new one.  For other kinds of resources it’s easier to
+provide a short and memorable name, as only the properties change and
+there’s a static name to refer to (like package{}).
 
 ```
   newparam(:name, :namevar => true) do
@@ -247,32 +255,33 @@ the properties change and there’s a static name to refer to (like package{}).
   end
 ```
 
-Our first property introduces ‘newvalues()’ and ‘defaultto()’.  These methods
-are some of the helpers Puppet contains to make it easier to validate input and
-provide defaults.  The first method, newvalues(), accepts a comma seperated
-list of values to accept.  These can be symbols, strings, or even regular
-expressions.  It’s fine to have newvalues(/^\//) in order to enforce an
-absolute path.  The second method, defaultto() just specifies the default
-Puppet should assume if you don’t pass the parameter in when defining the
+Our first property introduces ‘newvalues()’ and ‘defaultto()’.  These
+methods are some of the helpers Puppet contains to make it easier to
+validate input and provide defaults.  The first method, newvalues(),
+accepts a comma seperated list of values to accept.  These can be
+symbols, strings, or even regular expressions.  It’s fine to have
+newvalues(/^\//) in order to enforce an absolute path.  The second
+method, defaultto() just specifies the default value that Puppet
+should set if you don’t pass the parameter in when defining the
 resource in your manifest.
 
 ```
-newproperty(:socks) do
-    desc 'Should this be a SOCKS proxy'
-    newvalues(:true, :false)
-    defaultto :false
+  newproperty(:socks) do
+	desc 'Should this be a SOCKS proxy'
+	newvalues(:true, :false)
+	defaultto :false
   end
 ```
 
-Our next property demonstrates an alternative, more sophisticated, use of
-validation.  In validate we’re binding the value passed into validate to the
-variable ‘port’, making it available for checking within.  If you were to pass
-an array to local_port it would iterate over that array and pass each element
-to validate.
+Our next property demonstrates an alternative, more sophisticated, use
+of validation.  In validate we’re binding the value passed into
+validate to the variable ‘port’, making it available for checking
+within.  If you were to pass an array to local_port it would iterate
+over that array and pass each element to validate.
 
-Inside the block you can do whatever ruby code you like.  We’re trying to
-verify that port can be converted to an integer and then tested to make sure
-it’s a valid port range.
+Inside the block you can do whatever ruby code you like.  We’re trying
+to verify that port can be converted to an integer and then tested to
+make sure it’s a valid port range.
 
 ```
   newproperty(:local_port) do
@@ -290,8 +299,8 @@ Afterwards this results in output such as:
 Error: Could not run: Parameter local_port failed on Ssh_tunnel[8080-test@localhost]: Port is not in the range 1-65535
 ```
 
-The rest of our properties are all similar to the above explanations, so we
-won’t explain these further.
+The rest of our properties are all similar to the above explanations,
+so we won’t explain these further.
 
 ```
   newproperty(:forward_port) do
@@ -325,9 +334,10 @@ abstraction has a benefit.
 #Demonstration
 
 We start our provider by creating the Puppet::Type definition with
-.provide(:ssh) added.  We also set up a command.  This call to commands does a
-whole bunch of automatically checking of paths and so forth to make sure it
-finds the appropriate file in a generic, cross distribution, way:
+.provide(:ssh) added.  We also set up a command.  Behind the scenes
+this finds appropriate executables within the system path.  It does so
+in a generic, cross operating system, way so this works for Linux or
+Windows:
 
 ```
 Puppet::Type.type(:ssh_tunnel).provide(:ssh) do
@@ -336,11 +346,18 @@ Puppet::Type.type(:ssh_tunnel).provide(:ssh) do
   commands :ssh => 'ssh'
 ```
 
-`instances` is the heart of a provider.  It’s the method that Puppet runs to
-discover all the existing instances of this provider on your system.  In our
-case it means that it needs to check `ps` and find all running tunnels.  Once
-it does this it creates a resource for each (the instances << new() bit) and
-returns them all at the end to Puppet.
+`instances` is the heart of a provider.  It’s the method that Puppet
+runs to discover all the existing instances of the thing the provider
+is managing.  In the case of `user{}` that would be all the users.  In
+our case it means that it needs to check `ps` and find all running
+tunnels.  We do this by calling a method we haven't written yet,
+`ssh_processes`.  This'll take a string to search for and attempt to
+discover it on the server.  We'll write this later.
+
+Once we've discovered each of the processes we'll split the string into
+various pieces and use those to call new() which all the properties that
+were returned from ssh_processes.  We'll build an array of all these
+new() calls and return that to Puppet as the list of instances we found.
 
 ```
   def self.instances
@@ -380,15 +397,21 @@ returns them all at the end to Puppet.
   end
 ```
 
-Prefetch is called the first time Puppet encounters a resource of the type the
-provider is written for.  This lets you run code before any of the resources of
-that type are applied.  The most common use for this is seen below, caching of
-all the resources that exist on the system so it doesn’t have to figure out the
-properties of each of them individually.  Below we call self.instances and set
-the provider for each instance discovered to be the provider we’re in.  This is
-actually fairly complex to understand, so don’t worry if it makes no sense on
-first reading, you can just cut and paste self.prefetch into your other
-providers.
+Prefetch is called the first time Puppet encounters a resource in the
+catalog that matches the type that the provider is written for.  This
+allows you to run certain logic before any resource of that type is
+applied.  Maybe you need to run a command that temporarily allows
+changes to be applied to the thing being
+managed.  
+
+The most common use for `prefetch` is shown below.  When Puppet calls
+`prefetch` it passes in a hash of all the resources of the matching
+type.  This can be used to set this provider as managing each of the
+instances we discover on the system.
+
+This is difficult to explain and complex to understand.  For now you
+can simply cut and paste this into providers and tweak it a little to
+be appropriate to speed things up.
 
 ```
   def self.prefetch(resources)
@@ -404,28 +427,37 @@ providers.
   end
 ```
 
-Create is the method run when a resource isn’t found by self.instances is
-required due to ensure being set to present. This then creates the resource on
-your server. 
+Puppet runs `exists?` to determine if a resource actually exists on
+the agent.  This allows you to determine the existence of a resource
+in cases where it's not practical to create a list of all of the
+resources on the agent with `instances`.  Files would be an example
+of this, it would be expensive to create a resource for every file
+on the system through `instances`.
 
-In our method we’re checking if the @resource[:socks] (aka socks => x in the
-resource definition) is true.  If it’s true then we’re calling ssh() with
-appropriate parameters to create a socks proxy, else we create a tunnel.
+If Puppet contains a resource in the catalog with an ensure property
+set to present and can't find it as existing via `exists?` it'll run
+`create` to call the appropriate logic to create the resource.
 
-ssh() is created by the earlier `commands ssh => :ssh` statement.  The reason
-for this rather than calling commands directly is to add some additional
-features like showing calls via command() when you use --debug, automatic
-confining of the provider to only systems that contain the commands, and
-consistent command failure handling.
+In our `create` method we’re checking if the @resource[:socks] (aka
+socks => x in the resource definition) is true.  If it’s true then we
+call ssh() with appropriate parameters to create a socks proxy.  If
+@resource[:socks] is false then we just create a regular tunnel.
 
-You pass in arguments to ssh() one at a time, separated by spaces, and it
-safely builds up the appropriate command string to use.  In our case we’re
-mostly just passing in other bits of information from @resource, which is full
-of the values from the defined resource in a manifest.
+ssh() is created by the earlier `commands ssh => :ssh` statement.  The
+reason for this rather than calling commands directly is to add some
+additional features like showing calls via command() when you use
+--debug, automatic confining of the provider to only systems that
+contain the commands, and consistent command failure handling.
 
-By setting the @property_hash[:x] values to the @resource[:x] value, our
-provider is able to automatically create ‘getters’ for various bits of data
-later in the code.
+You pass in arguments to ssh() one at a time, separated by spaces, and
+it safely builds up the appropriate command string to use.  In our
+case we’re mostly just passing in other bits of information from
+@resource, which is full of the values from the defined resource in a
+manifest.
+
+By setting the @property_hash[:x] values to the @resource[:x] value,
+our provider is able to automatically create ‘getters’ (methods that
+get various bits of information) later in the code.
 
 ```
   def create
@@ -449,10 +481,11 @@ later in the code.
   end
 ```
 
-Destroy is, unsurprisingly, the method Puppet runs if ensure => absent.  In
-this case it simply extracts the pid it discovered in self.instances and sends
-it a SIGTERM to shut it down.  Once it does that it clears out the
-@property_hash to reflect that the resource, and all its properties are gone.
+Destroy is, unsurprisingly, the method Puppet runs if ensure => absent
+and `exists?` returned true.  In this case it simply checks the pid
+value contained within the @property\_hash and sends it a SIGTERM to
+shut it down.  Once it does that it clears out the @property_hash to
+reflect that the resource, and all its properties, is gone.
 
 ```
   def destroy
@@ -461,10 +494,11 @@ it a SIGTERM to shut it down.  Once it does that it clears out the
   end
 ```
 
-This is how Puppet determines if a resource already exists.  It just simply
-checks the property_hash (as we populate that in all the other functions like
-create() and instances(), otherwise this would have to check ps too) or returns
-false if @property_hash[:ensure] isn’t present.
+Here is how Puppet determines if a resource already exists.  It just simply
+checks the property\_hash we've built up when running `instances` and `create`
+to see if the resource is present.  If we had not written an `instances` method
+due to it being too expensive to run on the agent, we'd have had to check ps
+directly within `exists?` to determine if this resource was on the agent.
 
 ```
   def exists?
@@ -472,23 +506,31 @@ false if @property_hash[:ensure] isn’t present.
   end
 ```
 
-This method automatically creates methods that get the results of the property
-hash.  You effectively get all your `def socks` and `def local_port` getters
-without any additional work.  You can always combine this by redefining
-specific methods right after if you need to be cleverer than just checking the
-@property_hash value.
+Here is a piece of ruby metaprogramming that creates other methods within the
+provider.  It understands the properties and parameters contained within the
+type definition and automatically creates `property` and `property=` for each
+discovered from the type.   By default these check the @property_hash to find
+the appropriate value for the property.
+
+If you find that `mk_resource_methods` is appropriate for most of your methods
+but you sometimes need to tweak one of them (perhaps a tunnel=) then you can
+simply define another method right after this call to override the generated
+one.
 
 ```
   mk_resource_methods
 ```
 
-Here we have a helper method that passes the appropriate ssh_opts in to ssh()
-commands so that we don’t have to remember to add them everywhere.  It’s added
-as a self.ssh_opts so it’s visible to self.instances, and as ssh_opts so it’s
-also visible within instances.  I found this confusing at first, but sites such
-as
-(RubyMonk)[http://rubymonk.com/learning/books/4-ruby-primer-ascent/chapters/45-more-classes/lessons/113-class-variables]
-cover this in more detail.
+Here we have a helper method that passes the appropriate ssh_opts in
+to ssh() commands so that we don’t have to remember to add them
+everywhere. We create it as self.ssh_opts to make it a class method
+rather than an instance method, meaning there's just a single method
+that lives in the class rather than each instance of this provider.
+
+If this sounds confusing to you then you can read more about this on
+various ruby sites or in ruby books.  An example of this can be found
+at
+(rubymonks)[http://rubymonk.com/learning/books/4-ruby-primer-ascent/chapters/45-more-classes/lessons/113-class-variables].
 
 ```
   # -f tells ssh to go into the background just before command execution
@@ -502,25 +544,31 @@ cover this in more detail.
   end
 ```
 
-This makes all the the methods below this point in the code private to the
-class.
+Beyond this we wish to make the methods in our provider private so
+they cannot be accidently called from outside of the provider itself.
+Any method defined below this word will be considered private.
 
 ```
   private
 ```
 
-Here is the heart of our provider.  This method runs `ps` and attempts to regex
-out the appropriate pid and process details so that we can populate the
-instances in self.instances().
+Last, but not least, we have the `ssh_processes` method that actually
+determines what tunnels are running on the agent.  It calls `ps` and
+attempts to use regular expressions to extract the appropriate pid and
+process details needed to populate the instances in self.instances().
 
-One of the largest difficulties in writing generic types and providers is
-avoiding a dependency on ruby gems that aren’t already puppet dependencies,
-unless you’re willing to be responsible for installing them via the manifests
-that go with the module.  In our case this means we have to run ps and attempt
-to process it.  This code is now unportable to Windows and possibly other
-distributions with slightly different ps versions, and for real world usage we
-would look for a better pattern for this.  We could check /proc/ for linux, for
-example.
+One of the difficulities with writing types and providers is avoiding
+dependencies on ruby libraries that aren't already part of the
+standard ruby distribution, or dependencies of Puppet.  We could have
+written code here that called out to any of the process handling
+libraries of ruby, which would have been far more portable.  However,
+that would mean the ssh module would need to distribute or install
+this library on all systems and sometimes that's not desired.
+
+This is why the code below manually runs and processes the output of
+`ps`.  It's unportable to Windows and systems with a different `ps`
+command.  For real world usage we would want to consider finding
+better ways to handle this.
 
 ```
   # Find and return the ssh tunnel/proxy names and their associated pid.
