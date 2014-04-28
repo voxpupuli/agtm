@@ -2,43 +2,48 @@
 
 #Introduction
 
-Extending on from the three previous guides, [Classes, Params, APIs](link),
-[Types and Providers](link), and [Facts](link), we finally introduce testing
-into our SSH module.  Normally you would write tests as you go, rather than
-retrofit them in at the end, and we recommend a BDD development system.
+Extending on from the three previous guides,
+[Classes, Params, APIs](link), [Types and Providers](link), and
+[Facts](link), we finally introduce testing into our SSH module.
+Normally you would write tests as you go, rather than retrofit them in
+at the end, and we recommend a BDD development system.
 
-Having said that, we’re now going to retrofit in `puppet-rspec` unit tests,
-rspec unit tests for the type/provider, rspec unit tests for the fact, and
-Beaker acceptance tests to test the full workings of the module.
+Having said that, we’re now going to retrofit in `puppet-rspec` unit
+tests, rspec unit tests for the type/provider, rspec unit tests for
+the fact, and Beaker acceptance tests to test the full workings of the
+module.
 
-For examples of all of the testing we’re going to do you can investigate the
-puppetlabs modules [on the forge](https://forge.puppetlabs.com).  Modules like
-MySQL, Apache, RabbitMQ, PostgreSQL and Apt have all sorts of tests and you can
-often steal entire chunks for use in your own testing.
+For examples of all of the testing we’re going to do you can
+investigate the puppetlabs modules
+[on the forge](https://forge.puppetlabs.com).  Modules like MySQL,
+Apache, RabbitMQ, PostgreSQL and Apt have all sorts of tests and you
+can often steal entire chunks for use in your own testing.
 
 #Manifest Testing
 
-Rspec-puppet is the framework that we use for manifest testing.  Written and
-maintained by Tim Sharpe, better known as `rodjek`, a community member and
-Githubber, rspec-puppet extends rspec to understand Puppet and allows you to
-describe things in terms that makes sense for manifests.
+Rspec-puppet is the framework that we use for manifest testing.
+Written and maintained by Tim Sharpe, better known as `rodjek`, a
+community member and Githubber, rspec-puppet extends rspec to
+understand Puppet and allows you to describe things in terms that
+makes sense for manifests.
 
-For rspec-puppet testing you want to cover your “entry” classes, rather than
-having a spec test for the private subclasses.  That means for our module we
-just need to test ssh::client and ssh::server.
+For rspec-puppet testing you want to cover your “entry” classes,
+rather than having a spec test for the private subclasses.  That means
+for our module we just need to test ssh::client and ssh::server.
 
-Before we start the actual manifest testing we’ll cover setting up your module
-to be testable:
+Before we start the actual manifest testing we’ll cover setting up
+your module to be testable:
 
 ##Setup
 
-In order to test a module we need to do several things; add a Gemfile with the
-testing framework dependencies, add a spec_helper.rb file, a .fixtures.yml and
-a Rakefile.  Our Gemfile will be fairly barebones and borrowed from the
-puppetlabs modules:
+In order to test a module we need to do several things; add a Gemfile
+with the testing framework dependencies, add a spec_helper.rb file, a
+.fixtures.yml and a Rakefile.  Our Gemfile will be fairly barebones
+and borrowed from the puppetlabs modules:
 
-The opening section just sets the source of the gems we use, and creates a
-“development” group for [Bundler](http://bundler.io/) to consume later.
+The opening section just sets the source of the gems we use, and
+creates a “development” group for [Bundler](http://bundler.io/) to
+consume later.
 
 ```
 source 'https://rubygems.org'
@@ -46,10 +51,10 @@ source 'https://rubygems.org'
 group :development, :test do
 ```
 
-This is our list of gems to install.  I won’t talk about all of them, but
-‘Rake’ is used for a kind of Makefile that allows us to type `rake spec` to run
-tests, ‘puppetlabs_spec_helper’ adds some rake tests, and the last two are for
-code coverage and puppet-lint runs via Rake.
+This is our list of gems to install.  I won’t talk about all of them,
+but ‘Rake’ is used for a kind of Makefile that allows us to type `rake
+spec` to run tests, ‘puppetlabs_spec_helper’ adds some rake tests, and
+the last two are for code coverage and puppet-lint runs via Rake.
 
 ```
   gem 'rake',                    :require => false
