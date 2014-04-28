@@ -1,5 +1,7 @@
 #Introduction
 
+[RESEARCH:  Facter 2 and the changes within.  ]
+
 In the [previous section](Types and Providers) we extended the ssh
 module we began in the [Classes, Params, and APIs](Same) section to
 allow it to create ssh_tunnels.  Now we’re going to extend the module
@@ -12,12 +14,16 @@ exists on a server.
 These aren’t the most practical examples, but they serve as
 demonstrations for what you can do in facts.
 
+The recently released Facter 2.0 has dramatically changed the
+functionality and ability to write sophisicated facts.  This document
+has been written against Facter 2.0 and contains non-backwards
+compatible code.
+
 #Background
 
-By default when generating private keys via OpenSSH a pair is created
-with the filename id_x and id_x.pub.  The X differs by encryption
-method used, but generally it’s id_rsa and id_dsa.  Public keys look
-like:
+When generating private keys via OpenSSH, a pair is created with the
+filename id_x and id_x.pub.  The X differs by encryption method used,
+but generally it’s id_rsa and id_dsa.  Public keys look like:
 
 ```
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVwwxl6dz6Y7karwyS8S+za4qcu99Ra8H8N3cVHanEB+vuigtbhLOSb+bk6NjxFtC/jF+Usf5FM5fGIYd51L7RE9BbzbKiWb9giFnNqhKWclO5CY4sQTyUyYiJTQKLuVtkmiFeArV+jIuthxm6JrdOeFx8lJpcgGlZjlcBGxp27EbZNGWIlAdvW0ZXy0JqS9M/vj71NBBDfkrpyzAPC0aBa9+FmywOH6HXbyeFooHLOw+mfzP87jwDDQ2yXIehDoC1BsLYXD+j+kdnR0CNltJh1PYOFNpbKQpfnPhfdw4Oc0hZ34n+kfBPavKlbwxoVAoisBWWo4c9ZnUoe2OBRHAX comment at the end
@@ -25,70 +31,46 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVwwxl6dz6Y7karwyS8S+za4qcu99Ra8H8N3cVHanE
 
 #Supporting decisions
 
-Puppet is a declarative system, with an emphasis on building an end
-state desired for your nodes.  One common mistake of new puppet users
-is to write facts that are then used to make decisions that may change
-based on local state.  Facts should be used to find out the
-information needed to enforce a decision that the module designer has
-already decided on, rather than being used to make those decisions.
+Puppet is a declarative system, which means we describe the end
+configuration state desired for your nodes.  New puppet users often
+make the mistake of writing facts to allow them to build complex
+logic based on the local state of the agent being managed.  They then
+use these facts to determine what actions to take.  An example of this
+might be a fact called `apache_installed` and a manifest that says:
 
-For an example of this decision making process we can turn to the
-puppetlabs-lvm module, where the facts are used to provide supporting
-information to lvm and to enhance the ability to act upon declared end
-goals.
+```puppet
+if $apache_installed {
+  include 'something'
+}
+```
 
-Writing facts to make decisions rather than supporting them causes
-the unfortunate side effect of making your catalog
-nondeterministic. This means that it is hard to reason about
-infrastructure because it is constantly changing based on the local
-state of the systems.
+This is a dangerous way to use facts.  Facts should be used to find
+out the information needed to enforce a decision that the module
+designer has already decided on, rather than being used to make those
+decisions.  In the above example you should decide at a higher level
+if apache should be installed or not, and then make it so, not query
+the agent to find out if it was.
 
-A real world example of this is when a new user creates a fact that
-checks for the existence of a file on the local system and then
-installs a package based on this knowledge.  It is far better to
-decide if the package and file should or shouldn’t exist and then
-express that intent in your manifest, forcing the end state of the
-machine to your requirements.
+Writing facts to make decisions rather than supporting them causes the
+unfortunate side effect of making your catalog nondeterministic. This
+means that it is hard to reason about infrastructure because it is
+constantly changing based on the local state of the systems.  It's best
+to leave facts in a supporting role of helping you enforce policy that
+was predetermined based on the role or profile of the agent, not the
+local state of the server being managed.
 
 #Logic
 
 Another common mistake made is to move logic into facts, as opposed to
-modelling your logic within the manifest.  Facts should, where
+modelling your logic within the manifest.  Facts should, when
 possible, simply return information.  This is then consumed within the
-manifest to decide the end state.  Logic in facts is fine when it’s
-used to obtain the information, but you should write something like
-`ssh_required` which returns true/false.  Instead you would write a
-fact that returned something like `ssh_installed` and then express
-your logic further in the manifest.
-
-#Typing
-
-Confusing new users constantly is the fact that all when Puppet
-obtains facts from facter they are all “stringified”, removing all
-type information from them.  This means that a fact that returns a
-boolean of true/false when seen through running `facter` will become
-‘true’ and ‘false’ as strings within Puppet.  Yes, this means that a
-fact returning false is considered to be true within puppet when
-tested as a boolean, because strings always evaluate to true.  Instead
-you have to do:
-
-```
-if $fact == ‘false’
-```
-
-As only strings are allowed this also means you cannot return hashes
-or arrays.  As a way around this some facts will return a comma
-seperated list, such as the interfaces fact:
-
-```
-interfaces => lo0,gif0,stf0,en0,en3,en2,p2p0
-```
-
-You can use functions to create real types from this such as:
-
-```
-$interface_list = split($interfaces, ‘,’)
-```
+manifest to decide the end state.  Internal logic within the fact
+which is used to help obtain the information is fine, but you
+shouldn't write a fact called `ssh_required` that returns true/false.
+Instead you should write a fact called `ssh_installed` that returns
+true/false and then write the appropriate logic to determine if ssh is
+required within the manifest based on the knowledge that it's
+currently installed or not.
 
 #Confines
 
@@ -112,7 +94,7 @@ the `gid.rb` fact distributed with Facter.
 ##Demonstration
 
 We start our fact by requiring etc, a ruby gem, in order to iterate
-through the users on the system. we then iterate through each entry
+through the users on the system.  We then iterate through each entry
 of the password file.
 
 ```
