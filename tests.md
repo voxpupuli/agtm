@@ -6,12 +6,12 @@ Extending on from the three previous guides,
 [Classes, Params, APIs](link), [Types and Providers](link), and
 [Facts](link), we finally introduce testing into our SSH module.
 Normally you would write tests as you go, rather than retrofit them in
-at the end, and we recommend a BDD development system.
+at the end, but it's very common to inherit a module that has no tests
+and it's good to know how to start retrofitting them in.
 
-Having said that, we’re now going to retrofit in `puppet-rspec` unit
-tests, rspec unit tests for the type/provider, rspec unit tests for
-the fact, and Beaker acceptance tests to test the full workings of the
-module.
+We’re now going to retrofit in `puppet-rspec` unit tests, rspec unit
+tests for the type/provider, rspec unit tests for the fact, and Beaker
+acceptance tests to test the full workings of the module.
 
 For examples of all of the testing we’re going to do you can
 investigate the puppetlabs modules
@@ -23,9 +23,10 @@ can often steal entire chunks for use in your own testing.
 
 Rspec-puppet is the framework that we use for manifest testing.
 Written and maintained by Tim Sharpe, better known as `rodjek`, a
-community member and Githubber, rspec-puppet extends rspec to
-understand Puppet and allows you to describe things in terms that
-makes sense for manifests.
+community member and Githubber. Rspec-puppet extends rspec by adding
+matchers and other infrastructure to allow it to understand Puppet
+catalogs, which allows you to make assertions about the state of your
+catalog in the presence of certain parameters, variables, and facts.
 
 For rspec-puppet testing you want to cover your “entry” classes,
 rather than having a spec test for the private subclasses.  That means
@@ -80,7 +81,10 @@ require 'puppetlabs_spec_helper/rake_tasks'
 ```
 
 Then the .fixtures.yml file, which is used to download and setup any
-dependencies when doing testing.
+dependencies when doing testing.  We need to create a symlink for our
+own module into the testing space, as well as any other modules that
+we depend on.  This means you'll have to constantly update this file
+any time you add a Modulefile dependency.
 
 ```
 fixtures:
@@ -90,10 +94,10 @@ fixtures:
     "ssh": "#{source_dir}"
 ```
 
-And lastly our spec/spec_helper.rb.  We require and include simplecov as this
-will generate code coverage reports for types and providers.  Sadly it doesn’t
-work for manifests.  Lastly it includes puppetlabs_spec_helper which does all
-the rest of the work for us:
+And lastly our spec/spec_helper.rb.  We require and include simplecov
+as this will generate code coverage reports for types and providers.
+Sadly it doesn’t work for manifests.  Lastly it includes
+puppetlabs_spec_helper which does all the rest of the work for us:
 
 ```
 require 'simplecov'
@@ -103,11 +107,11 @@ end
 require 'puppetlabs_spec_helper/module_spec_helper'
 ```
 
-At this point you should be able to issue `be rake spec`.  If this fails then
-the rest of this section won’t work for you.  You can grab the module with all
-the required files [at
-github](https://github.com/apenney/puppetlabs-ssh/commit/6f7f2d978fc3d70412771cc210646f6db5225fe4)
-to ensure there’s no issues in your local copy.
+At this point you should be able to issue `be rake spec`.  If this
+fails then the rest of this section won’t work for you.  You can grab
+the module with all the required files
+[at github](https://github.com/apenney/puppetlabs-ssh/) to ensure
+there’s no issues in your local copy.
 
 ```
 $ be rake spec
@@ -121,9 +125,10 @@ Finished in 0.00009 seconds
 
 ##Demonstration
 
-Now we have the module ready for testing we can start by adding some simple
-tests for ssh::client in the file spec/classes/ssh_client_spec.rb.  (All spec
-tests should end in _spec.rb or the rake task won’t find them).
+Now we have the module ready for testing we can start by adding some
+simple tests for ssh::client in the file
+spec/classes/ssh_client_spec.rb.  (All spec tests should end in
+_spec.rb or the rake task won’t find them).
 
 We open the file with a description of the class we want to test:
 
@@ -133,20 +138,22 @@ require 'spec_helper'
 describe 'ssh::client' do
 ```
 
-If you want to test multiple distributions or systems in rspec-puppet you have
-to “mock” out the facts for that system to trick Puppet into supplying a
-catalog for that system.  In order to do this in our tests we create a
-‘shared_example’, which is basically a chunk of code you can pass parameters
-into elsewhere in the test.  This lets us avoid repeating ourselves to test
-multiple distributions.
+If you want to test multiple distributions or systems in rspec-puppet
+you have to “mock” out the facts for that system to trick Puppet into
+supplying a catalog for that system.  In order to do this in our tests
+we create a ‘shared_example’, which is basically a chunk of code you
+can pass parameters into elsewhere in the test.  This lets us avoid
+repeating ourselves to test multiple distributions.
 
-Within this shared_example block we named ‘client’ we create two seperate
-tests, one for the package, and one for the configuration file.  To make sure
-our catalog works properly we’ll need to check that the package_name is right
-and that the package_path is correct.  We use the variables in the
-shared_examples block to fill in the gaps in the .with() sections of our tests.
+Within this shared_example block we named ‘client’ we create two
+seperate tests, one for the package, and one for the configuration
+file.  To make sure our catalog works properly we’ll need to check
+that the package_name is right and that the package_path is correct.
+We use the variables in the shared_examples block to fill in the gaps
+in the .with() sections of our tests.  Lastly we'll make sure the
+configuration file contains something that matches our defaults.
 
-```
+```ruby
   shared_examples 'client' do |osfamily, package_name, package_path|
     let(:facts) {{ :osfamily => osfamily }}
 
@@ -163,13 +170,20 @@ shared_examples block to fill in the gaps in the .with() sections of our tests.
         :path   => package_path
       )
     end
+
+	it 'contains default configuration' do
+	  should contain_file('ssh_config').with_content(
+	    /Host */
+	  )
+	end
   end
 ```
 
-Now we call our ‘client’ shared_examples by passing variables into a method
-called ‘it_behaves_like’.  We pass in the name of the shared_example first and
-then the other variables in order.  This means that osfamily in the ‘client’
-example gets get to ‘RedHat’ in the first example below.
+Now we call our ‘client’ shared_examples by passing variables into a
+method called ‘it_behaves_like’.  We pass in the name of the
+shared_example first and then the other variables in order.  This
+means that osfamily in the ‘client’ example gets get to ‘RedHat’ in
+the first example below.
 
 ```
   context 'RedHat' do
@@ -181,10 +195,10 @@ example gets get to ‘RedHat’ in the first example below.
   end
 ```
 
-Here we test an unsupported operating system.  We set the fact to make the
-osfamily something we didn’t account for in ssh::params and inside the it{}
-block we state that “we expect (including the class) to raise an error()” which
-it does, telling us that the class is unsupported.
+Here we test an unsupported operating system.  We set the fact to make
+the osfamily something we didn’t account for in ssh::params and inside
+the it{} block we state that “we expect (including the class) to raise
+an error()” which it does, telling us that the class is unsupported.
 
 ```
   context 'Unsupported' do
@@ -195,62 +209,93 @@ it does, telling us that the class is unsupported.
 end
 ```
 
-Now we switch to testing the ssh::server class.  These tests are almost
-identical to ssh::client except for the additional of a ‘contains_server()’
-block in the main shared_examples.  However, we can extend our tests and add a
-new block that tests the configuration parameters.
+Now we switch to testing the ssh::server class.  These tests are
+almost identical to ssh::client except for the additional of a
+‘contains_server()’ block in the main shared_examples.  
 
-First we add a new section, let(:params) which takes a hash as the block body
-with all the parameters for the class within.  We’ve set each configuration
-parameter in the class to something specific:
+```ruby
+require 'spec_helper'
 
+describe 'ssh::server' do
+
+  shared_examples 'server' do |osfamily, package_name, package_path, service_name|
+    let(:facts) {{ :osfamily => osfamily }}
+
+    it 'contains the package' do
+      should contain_package('sshd').with(
+        :ensure => 'present',
+        :name   => package_name
+      )
+    end
+
+    it 'contains the ssh_config file' do
+      should contain_file('sshd_config').with(
+        :ensure => 'present',
+        :path   => package_path
+      )
+    end
+
+    it 'contains the sshd service' do
+      should contain_service('sshd').with(
+        :ensure => 'running',
+        :name   => service_name
+      )
+    end
+  end
+
+  context 'RedHat' do
+    it_behaves_like 'server', 'RedHat', 'openssh-server', '/etc/ssh/sshd_config', 'sshd'
+  end
+
+  context 'Debian' do
+    it_behaves_like 'server', 'Debian', 'openssh-server', '/etc/ssh/sshd_config', 'ssh'
+  end
+
+  context 'Unsupported' do
+    let(:facts) {{ :osfamily => 'Unsupported' }}
+    it { expect { should contain_class('ssh::server') }.to raise_error(Puppet::Error, /is unsupported on Unsupported/) }
+  end
 ```
-  context 'template contents' do
+
+Lastly we can check that the configuration file contains the expected parameters
+from the defaults for Debian.  We do this by checking the configuration file
+for various parameters we know are set.  You could condense this to a single
+test that checks multiple parts of file with a complex regular expression, but
+this is more readable.  Intent and clarity is more important than saving space
+within tests.  This makes it easy to extend by adding new tests as we add new
+ssh configuration to the defaults.
+
+```ruby
+  context 'default template contents' do
     let(:facts) {{ :osfamily => 'Debian' }}
-    let(:params) {
-      { :port                    => '8080',
-        :protocol                => '3',
-        :permit_root_login       => false,
-        :password_authentication => false,
-        :sftp_path               => '/usr/test',
-        :hostkeys                => [ 'key1', 'key2', 'key3' ]
-      }
-    }
-```
-
-Now we can do a series of checks on the file to make sure it contains the entry
-we would expect.  You could condense this to a single regular expression that
-tested everything at once but it’s not really a problem.  Intent and clarity is
-more important than space saving in a test and this makes it very easy to add
-new parameters by repeating the it{} block and tweaking the contents.
-
-```
 
     it { should contain_file('sshd_config').with(
-      :content => /Port 80/
+      :content => /Port 22/
     )}
     it { should contain_file('sshd_config').with(
-      :content => /Protocol 3/
+      :content => /Protocol 2/
     )}
     it { should contain_file('sshd_config').with(
-      :content => /PermitRootLogin false/
+      :content => /PermitRootLogin yes/
     )}
     it { should contain_file('sshd_config').with(
-      :content => /PasswordAuthentication false/
+      :content => /PasswordAuthentication yes/
     )}
     it { should contain_file('sshd_config').with(
-      :content => /Subsystem sftp \/usr\/test/
+      :content => /Subsystem sftp \/usr\/lib\/openssh\/sftp-server \/usr\/lib\/openssh\/sftp-server/
     )}
     it { should contain_file('sshd_config').with(
-      :content => /# HostKeys for protocol version 2\nkey1\nkey2\nkey3\n/
+      :content => /HostKey \/etc\/ssh\/ssh_host_rsa_key/
     )}
   end
+
+end
 ```
 
 ###Results
 
-When I ran the tests for the first time after writing them they failed with
-errors like below:
+When I wrote these tests against a development copy of the SSH module they
+immedately failed with errors.
 
 ```
   1) ssh::client RedHat behaves like client contains the package
@@ -260,9 +305,14 @@ errors like below:
      # ./spec/classes/ssh_client_spec.rb:12:in `block (3 levels) in <top (required)>'
 ```
 
-It looked like ssh::client wasn’t picking up the information from ssh::params
-properly and when I checked manifests/client.pp it turned out that I had
-forgotten to inherit from ssh::params and it was indeed broken.
+Upon looking into this I found that ssh::client wasn’t picking up the
+information from ssh::params properly and when I checked manifests/client.pp it
+turned out that I had forgotten to inherit from ssh::params and it was indeed
+broken.
+
+This kind of thing is pretty common to discover when you write manifest tests
+for the first time, and you'll be surprised to find how easily this can expose
+missing parameters, logic bugs, and other simple mistakes.
 
 #Unit Testing
 
