@@ -320,7 +320,7 @@ Now we have functioning manifest tests we switch to traditional rspec unit
 testing.  We’re going to test the code we wrote for facts earlier.  Most module
 writers are not traditional developers, and so we’ll build out our tests in a
 slightly less sophisticated way than is supported by rspec in the interests of
-clarity.  The module team has found that the tests for types, providers, and
+clarity.  Our module team has found that the tests for types, providers, and
 facts, within Puppet can be terrible examples to learn from as they assume a
 high level of familarity with ruby and with testing.  We hope the below
 demonstration will be a bit more sysadmin oriented and easier to follow.
@@ -333,12 +333,17 @@ etc is only required for access to Struct::Passwd, the
 [struct](http://www.ruby-doc.org/core/Struct.html) that Etc.passwd returns when
 called.
  
-``` require 'spec_helper' require 'etc' ```
+```ruby
+require 'spec_helper'
+require 'etc'
+```
 
-Here we use let() to introduce three things we need to mock up in our tests.
-singleuser becomes an object made up of a Struct::Passwd containing a fake
-entry from /etc/passwd, and multiuser becomes an array of two fake users.
-Last, keys becomes a variable containing the contents of a fake id_rsa.pub
+Next we need to create some objects to work with.  We're going to use the let()
+command, with the syntax `let(:name) { thing }`.  We're going to create several
+objects, starting with singleuser.  Singleuser is a Struct::Passwd.new()
+object, which contains a single fake /etc/passwd entry.  Struct::Passwd.new()
+comes from the `etc` library we required earlier.   We also create a multiuser
+array of two entries.  Finally we create `keys`, containing a fake id_rsa.pub
 file.
 
 ```
@@ -358,17 +363,22 @@ Now we’re into the actual tests.  We start by describing what the test is for,
 in this case a single user, then create our ‘before :each do’ block.  This is
 code that is ran before each it{} within this describe block.  In our case we
 start using ‘stubs’ as a way of faking the return of various functions that
-exist in our fact.  Our first stub is for Etc.passwd, and we make it yield up
-the singleuser struct we had before.  We next stub Dir[] with the test users
-.ssh directory returning a single file, id_rsa.pub.  Last, we stub File.read()
-for that file to return the fake keys content we defined earlier.
+exist in our fact.  This means when the fact attempts to execute we sneak in
+and replace the intended returns for various functions with our fake entries.
+
+Our first stub is for Etc.passwd, and we make it yield up the singleuser struct
+we had before.  We next stub Dir[] with the test users .ssh directory returning
+a single file, id_rsa.pub.  Last, we stub File.read() for that file to return
+the fake keys content we defined earlier.
 
 Inside the it{} block we then actually run Facter.fact() to call our real ruby
 fact.  This code is run, but when the functions we stubbed are found it just
 skips running them for real and returns the fake stuff we stubbed out.
 
 We then use .value.should eq ‘thing’ to assert that our fact, when run with our
-fake data, should find two comments.
+fake data, should find two comments.  When taken together this test ensures
+that all the logic of the fact works if fed with pregenerated data that we can
+make assertions against.
 
 ```
   describe 'single user' do
@@ -457,16 +467,17 @@ We start with our type test.  These are relatively straightforward because they
 are generally about testing the validation of the class.  We require ‘puppet’
 this time as we’re going to be creating Puppet::Types and testing them.
 
-```
+```ruby
 require 'spec_helper'
 require 'puppet'
 
 describe Puppet::Type.type(:ssh_tunnel) do
 ```
 
-Here we create two instances of our type, one for socks and one for a tunnel, so we can easily test without repeating ourselves.
+Here we create two instances of our type, one for socks and one for a tunnel,
+so we can easily test without repeating ourselves.
 
-```
+```ruby
   let(:socks) { Puppet::Type.type(:ssh_tunnel).new(
     :name          => 'test',
     :local_port    => '8080',
@@ -486,7 +497,7 @@ Here we create two instances of our type, one for socks and one for a tunnel, so
 Here we simply check that all of the parameters we set above actually return
 the correct information.
 
-```
+```ruby
   context 'socks' do
     it 'should accept a name' do
       socks[:name].should eq 'test'
@@ -501,8 +512,6 @@ the correct information.
       socks[:remote_server].should eq 'testserver'
     end
   end
-
-
 
   context 'tunnel' do
     it 'should accept a name' do
@@ -580,13 +589,12 @@ when retrofitting.  We’ll refer to the provider we’re testing by ‘subject�
 which is the “thing between describe and do”, and expect two existing tunnels
 running that we’ll stub out later.  In our example this might look like.
 
-```
-    it do
+```ruby
+    it 'tests the tunnels exist' do
       instances = subject.class.instances.map { |p| {:name => p.get(:name), :ensure => p.get(:ensure)} }
       instances[0].should == {:name => '8080:localhost:80-tunnel@remote', :ensure => :present}
       instances[1].should == {:name => '8080-socks@remote', :ensure => :present}
     end
-
 ```
 
 That’s a pretty confusing looking it block, so I’ll try to describe what we’re
@@ -603,7 +611,7 @@ given fake data.
 Working from the top of the file again, we fill in two type and provider
 instances as well as stub out the returns from ssh_processes:
 
-```
+```ruby
 require 'spec_helper'
 
 describe Puppet::Type.type(:ssh_tunnel).provider(:ssh) do
@@ -659,7 +667,10 @@ errors:
 Our next real test is our ‘create’ test.  We ‘expect’ the required arguments
 that would be sent to ssh() for a successful tunnel to be created, stub out the
 exists?() method return of true, and then run create() and ensure we get no
-errors:
+errors.  When the .create method is called it automatically checks the expects
+we assert above, making sure that it tried to call `ssh` with the appropriate
+arguments.  It stops them actually being called for real on a machine, and just
+checks that they would have been.
 
 ```
   describe 'create' do
@@ -709,3 +720,200 @@ and assert that it should return true:
     end
   end
 ```
+
+# Beaker
+
+In the above testing we've focused on unit tests.  These are the frontline of
+your tests and should cover all the lines of code where possible.  However,
+there's a second kind of testing available to Puppet modules; acceptance
+testing, which runs tests against real virtual machines to ensure your
+manifests actually have the effects you're expecting.
+
+Internally at Puppetlabs we have built a framework for this kind of testing,
+which is called [Beaker](https://github.com/puppetlabs/beaker). It's a little
+rough and ready around the edges in terms of documentation, because it was only
+used internally until the module team started adopting it for modules and
+spreading the good word about how powerful this kind of testing can be.
+
+Beaker is a framework to automatically create and manage virtual machines on
+various hypervisors, then apply numerous rspec tests against those virtual
+machines, then delete and destroy the machines as required.
+
+In order to add beaker tests to our SSH module we start with creating the
+'spec_helper_acceptance.rb' file in the specs directory. This is a central
+place to put setup information for Beaker, generally things like code to
+install Puppet or modules.
+
+First we add beaker to our Gemfile.
+
+```ruby
+source 'https://rubygems.org'
+gem 'beaker-rspec'
+```
+
+If you use [bundler](http://bundler.io/) then you can run `bundler update` to
+have it pull in all the gems required for acceptance testing.
+
+Once this is done we need to create some framework for Beaker.  We'll start
+by creating a very simple "nodeset", a yaml file that lists out a virtual
+machine to test against.  We'll put this in spec/acceptance/nodesets/default.yml.
+
+```
+HOSTS:
+  centos-65-x64:
+    roles:
+      - master
+    platform: el-6-x86_64
+    box : centos-65-x64-vbox436-nocm
+    box_url : http://puppet-vagrant-boxes.puppetlabs.com/centos-65-x64-virtualbox-nocm.box
+    hypervisor : vagrant
+CONFIG:
+  type: foss
+```
+
+These can be much more complex, including multiple hosts, but we'll keep it
+simple.  Next we create spec/spec_helper_acceptance.rb.  We begin this file by
+requiring beaker-rspec itself.  The next block checks to see if we've passed in
+certain environment options when running beaker (we'll talk more about these
+later) and only runs the provisioning code if we didn't set RS_PROVISON=no.
+
+Assuming we didn't set that, it then checks the nodeset that we pass to Beaker
+to determine if it should install Puppet Enterprise or plain old Puppet.
+
+```ruby
+require 'beaker-rspec'
+
+unless ENV['RS_PROVISION'] == 'no'
+  hosts.each do |host|
+    # Install Puppet
+    if host.is_pe?
+      install_pe
+    else
+      install_puppet
+    end
+  end
+end
+```
+
+Next is some boilerplate RSpec.configure information.  We're creating a
+proj_root variable that points to the module we're testing, as well as making
+the rspec output a little prettier and easier to read.
+
+```ruby
+RSpec.configure do |c|
+  # Project root
+  proj_root = File.expand_path(File.join(File.dirname(__FILE__), '..'))
+
+  # Readable test descriptions
+  c.formatter = :documentation
+```
+
+This final block says "before you run an actual test, do the following", which
+then calls puppet_module_install() to install the current module into 'ssh' on
+the virtual machine, as well as runs two shell commands to create an empty
+hiera.yaml and install stdlib.  Here we see :acceptable_exit_codes for the
+first time, one of our primary ways of asserting the exit codes we'll accept
+from commands.
+
+```ruby
+  c.before :suite do
+    puppet_module_install(:source => proj_root, :module_name => 'ssh')
+    hosts.each do |host|
+
+      shell("/bin/touch #{default['puppetpath']}/hiera.yaml")
+      shell('puppet module install puppetlabs-stdlib', { :acceptable_exit_codes => [0,1] })
+    end
+  end
+end
+```
+
+With the basic helper and nodeset created we just need to make a few tests. We'll
+put these in a file called spec/acceptance/class_spec.rb.  We include the file
+we just created, spec_helper_acceptance, and then describe what we're testing.
+
+First we create `pp`, a variable to hold our manifest.  We use ruby's EOS
+functionality to make sure we don't have to backslash a bunch of stuff and
+can just cut and paste in manifests from elsewhere.
+
+```ruby
+require 'spec_helper_acceptance'
+
+describe 'ssh class:' do
+  it 'should run successfully' do
+    pp = <<-EOS
+    class { 'ssh::client': }
+    class { 'ssh::server': }
+    EOS
+```
+
+Now we do the actual test.  apply_manifest() takes a manifest and various
+options about what the outcome should be.  On our first run we're looking to
+"catch any failures" and then on our second run we're looking to "catch any
+changes".  This allows us to be confident we're not changing the state of the
+machine on multiple runs if everything is set correctly the first time.  We
+have some other choices here, including :expect_failures and :expect_changes
+for testing things we expect to fail, or change.
+
+```ruby
+
+    # Apply twice to ensure no errors the second time.
+    apply_manifest(pp, :catch_failures => true)
+    apply_manifest(pp, :catch_changes => true)
+  end
+```
+
+Next we take advantage of our [ServerSpec](http://serverspec.org/) integration
+in order to check the service is running.  ServerSpec understands a whole bunch
+of distributions and allows you to describe packages or services in an OS
+independent way.  It'll understand that RHEL needs service x status and that
+Windows needs something totally different.  It has a number of resources
+documented on the website, we'll just use service now.
+
+```ruby
+
+  describe service('sshd') do
+    it { should be_enabled.with_level(3) }
+    it { should be_running }
+  end
+
+```
+
+Alternatively if we need to test something more complex we can rely on shell()
+commands.  Our module is very simple so we'll reproduce the above test, but
+with shell commands.  It's important to realize this can easily make your tests
+unportable, with the commands only working for a single operating system, which
+is why we recommend serverspec.
+
+```ruby
+  describe 'service' do
+    it 'should be running' do
+      shell('service sshd status', :acceptable_exit_codes => [0]) do |r|
+        expect(r.stdout).to match(/openssh-daemon.*is running/)
+      end
+    end
+  end
+
+end
+```
+
+
+Then putting all this together we just need to run a single command, if things
+worked, to see the output of all these tests.
+
+```
+$ rspec spec/acceptance/
+Hypervisor for centos-64-x64 is vagrant
+Beaker::Hypervisor, found some vagrant boxes to create
+created Vagrantfile for VagrantHost centos-64-x64
+[bunch of deleted stuff about bringing up a virtual machine and setup commands]
+Finished in 3 minutes 15.2 seconds
+4 examples, 0 failures
+```
+
+I hope this has helped explain a little bit of our acceptance testing framework
+and made you realize it's pretty easy to integrate into your workflow.  Here at
+Puppetlabs we mostly test with Vagrant/Virtualbox on our laptops as we develop
+and then use Vsphere to test via Jenkins before we're ready to merge a PR or
+release the updated module.  For real life examples of Beaker you can look at
+many of the puppetlabs modules, such as apache, mysql, postgresql, firewall,
+for examples of real world testing.
