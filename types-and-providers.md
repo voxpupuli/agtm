@@ -5,7 +5,7 @@
 Types and providers are the heart of how Puppet works.  They allow you to
 express the "how to do something" through raw commands, outside of the
 constraints of the Puppet DSL.  With that information Puppet can then figure
-out how to transistion from what you have to what you want.   They are written
+out how to transition from what you have to what you want.   They are written
 in Ruby, like Puppet.
 
 Types and providers are preferred over execs and definitions due the ability to
@@ -17,7 +17,7 @@ manage within the constraints of the DSL.  For instance,  a provider that
 An example of this is a provider that manages local redis instances.  It would
 need to make an actual TCP connection to the database to retrieve the current
 state of the properties you wish to manage with Puppet.  This would be impossible
-within the DSL and therefore modelled as a type and provider.
+within the DSL and therefore modeled as a type and provider.
 
 To highlight these practices, we will expand the basic ssh module we built in
 the [previous section](link to Classes, Params, and APIs) to add a type and
@@ -29,7 +29,7 @@ It would not be unusual to model something like ssh tunnels or SOCKS proxies
 within a definition in Puppet to allow the creation of multiple instances.  While
 this may work in the most simplistic of cases it usually breaks down in production
 quality modules due to the complexities of managing the underlying system state
-with the limitations of `exec{}`.  You cannot do sophisicated logic easily and
+with the limitations of `exec{}`.  You cannot do sophisticated logic easily and
 are limited to chaining together `exec{}` resources to try and do various things
 based on exit codes and shell commands.
 
@@ -545,7 +545,7 @@ at
 ```
 
 Beyond this we wish to make the methods in our provider private so
-they cannot be accidently called from outside of the provider itself.
+they cannot be accidentally called from outside of the provider itself.
 Any method defined below this word will be considered private.
 
 ```
@@ -557,7 +557,7 @@ determines what tunnels are running on the agent.  It calls `ps` and
 attempts to use regular expressions to extract the appropriate pid and
 process details needed to populate the instances in self.instances().
 
-One of the difficulities with writing types and providers is avoiding
+One of the difficulties with writing types and providers is avoiding
 dependencies on ruby libraries that aren't already part of the
 standard ruby distribution, or dependencies of Puppet.  We could have
 written code here that called out to any of the process handling

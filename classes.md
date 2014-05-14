@@ -8,7 +8,7 @@
 As mentioned in the [Beginner's Guide to
 Modules](http://docs.puppetlabs.com/guides/module_guides/bgtm.html),
 *classes* are used to aggregate and organize *parameters*, the
-publically-consumable *API*-like interface of your module.  This first
+publicly-consumable *API*-like interface of your module.  This first
 section of the Advanced Guide to Modules will walk through the best
 practices for developing a basic module: from determining how many and
 which classes to use to figuring out what your parameters will do and
@@ -844,7 +844,7 @@ What is the name of the ssh server service?
 
 ####`configuration_data`
 
-This allows you to pass in arbitary configuration to the sshd_config file. You
+This allows you to pass in arbitrary configuration to the sshd_config file. You
 create it in the format of:
 
 { 'Parameter' => 'Value' }
@@ -855,7 +855,7 @@ hash from the params.pp file and modify it to taste.
 ####`os_configuration_data`
 
 Similar to the `configuration_data` parameter this is a hash containing
-configuration data that differs between operating systems.  This seperation
+configuration data that differs between operating systems.  This separation
 allows you to set only OS specific configuration settings without touching the
 main hash if you so wish.
 

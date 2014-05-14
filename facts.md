@@ -15,7 +15,7 @@ These aren’t the most practical examples, but they serve as
 demonstrations for what you can do in facts.
 
 The recently released Facter 2.0 has dramatically changed the
-functionality and ability to write sophisicated facts.  This document
+functionality and ability to write sophisticated facts.  This document
 has been written against Facter 2.0 and contains non-backwards
 compatible code.
 
@@ -62,7 +62,7 @@ local state of the server being managed.
 #Logic
 
 Another common mistake made is to move logic into facts, as opposed to
-modelling your logic within the manifest.  Facts should, when
+modeling your logic within the manifest.  Facts should, when
 possible, simply return information.  This is then consumed within the
 manifest to decide the end state.  Internal logic within the fact
 which is used to help obtain the information is fine, but you
@@ -125,7 +125,7 @@ users name to the list of users.
 Finally, at the end we return the list of users.
 
 ```
-    # Facts must be strings, so return a list of users comma seperated.
+    # Facts must be strings, so return a list of users comma separated.
     users.join(',')
   end
 end

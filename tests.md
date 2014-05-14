@@ -146,7 +146,7 @@ can pass parameters into elsewhere in the test.  This lets us avoid
 repeating ourselves to test multiple distributions.
 
 Within this shared_example block we named ‘client’ we create two
-seperate tests, one for the package, and one for the configuration
+separate tests, one for the package, and one for the configuration
 file.  To make sure our catalog works properly we’ll need to check
 that the package_name is right and that the package_path is correct.
 We use the variables in the shared_examples block to fill in the gaps
@@ -295,7 +295,7 @@ end
 ###Results
 
 When I wrote these tests against a development copy of the SSH module they
-immedately failed with errors.
+immediately failed with errors.
 
 ```
   1) ssh::client RedHat behaves like client contains the package
@@ -322,7 +322,7 @@ writers are not traditional developers, and so we’ll build out our tests in a
 slightly less sophisticated way than is supported by rspec in the interests of
 clarity.  Our module team has found that the tests for types, providers, and
 facts, within Puppet can be terrible examples to learn from as they assume a
-high level of familarity with ruby and with testing.  We hope the below
+high level of familiarity with ruby and with testing.  We hope the below
 demonstration will be a bit more sysadmin oriented and easier to follow.
 
 ##Demonstration
