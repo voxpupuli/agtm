@@ -14,6 +14,13 @@ exists on a server.
 These aren’t the most practical examples, but they serve as
 demonstrations for what you can do in facts.
 
+Keep in mind when considering whether or not to write a fact to gather data
+that facts are executed on the client prior to catalog compilation on the
+master [??? VERIFY! I know this is on the client, but only somewhat sure the
+ordering goes agent requests catalog, master requests facts, master sends back
+catalog with facts populated'].  If you need to gather information that is
+available on the puppet master you should instead be using custom functions.
+
 The recently released Facter 2.0 has dramatically changed the
 functionality and ability to write sophisticated facts.  This document
 has been written against Facter 2.0 and contains non-backwards
@@ -89,9 +96,9 @@ confine { File.exists?(keyfile) }
 ```
 
 An example of a fact that relies on a confine block can be found in
-the `gid.rb` fact distributed with Facter.
+the `hardwaremodel.rb` fact distributed with Facter.
 
-##Demonstration
+#Demonstration
 
 We start our fact by requiring etc, a ruby gem, in order to iterate
 through the users on the system.  We then iterate through each entry
