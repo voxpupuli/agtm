@@ -55,7 +55,7 @@ API, the parameters for all the classes.  A module with too few
 parameters is inflexible, whilst a module with too many parameters
 loses focus and thus efficacy because it has no opinions.  Ideally
 your module would be opinionated without losing all flexibility,
-keeping in mind the scope of your module.  This might mean creating
+keeping in mind the scope of your module [COMMENT].  This might mean creating
 parameters for the most common options you wish to configure, as well
 as with escape-hatch parameters that allow a user to pass in custom
 files or hashes.
@@ -473,7 +473,7 @@ Host b
 You could create a `configuration_data` parameter in ssh::client and
 pass it:
 
-[ {‘a’ => {‘Parameter’ => ‘1’}}, {‘b’ => {‘Parameter’ => ‘2’}} ]
+[ {‘a’ => {‘Parameter’ => ‘1’}}, {‘b’ => {‘Parameter’ => ‘2’}} ] [COMMENT]
 
 This is an array of hashes, each of which contains a key that points
 to another sub-hash of parameters.  It’s complex if you’re not used to
