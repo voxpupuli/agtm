@@ -36,7 +36,7 @@ but generally it’s id_rsa and id_dsa.  Public keys look like:
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDVwwxl6dz6Y7karwyS8S+za4qcu99Ra8H8N3cVHanEB+vuigtbhLOSb+bk6NjxFtC/jF+Usf5FM5fGIYd51L7RE9BbzbKiWb9giFnNqhKWclO5CY4sQTyUyYiJTQKLuVtkmiFeArV+jIuthxm6JrdOeFx8lJpcgGlZjlcBGxp27EbZNGWIlAdvW0ZXy0JqS9M/vj71NBBDfkrpyzAPC0aBa9+FmywOH6HXbyeFooHLOw+mfzP87jwDDQ2yXIehDoC1BsLYXD+j+kdnR0CNltJh1PYOFNpbKQpfnPhfdw4Oc0hZ34n+kfBPavKlbwxoVAoisBWWo4c9ZnUoe2OBRHAX comment at the end
 ```
 
-#Supporting decisions
+#Supporting decisions [COMMENT]
 
 Puppet is a declarative system, which means we describe the end
 configuration state desired for your nodes.  New puppet users often
@@ -74,12 +74,12 @@ possible, simply return information.  This is then consumed within the
 manifest to decide the end state.  Internal logic within the fact
 which is used to help obtain the information is fine, but you
 shouldn't write a fact called `ssh_required` that returns true/false.
-Instead you should write a fact called `ssh_installed` that returns
+Instead you should write a fact called `ssh_installed` [COMMENT] that returns
 true/false and then write the appropriate logic to determine if ssh is
 required within the manifest based on the knowledge that it's
 currently installed or not.
 
-#Confines
+#Confines [COMMENT]
 
 One of the mechanisms facts supports is confines, allowing you to
 write:
