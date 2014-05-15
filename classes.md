@@ -17,14 +17,6 @@ practices, we'll build the framework of a basic ssh module.
 
 ##Getting Started
 
-###Intro to SSH
-
-SSH is software designed to secure connections to remote servers.  It
-can be used to provide a secure shell, as well as to transfer files
-and tunnel TCP traffic securely through machines.  For more
-information please visit
-[Wikipedia](http://en.wikipedia.org/wiki/Secure_Shell).
-
 ###Classes
 
 A module is, at its heart, a place to create a number of classes that
@@ -46,9 +38,9 @@ private subclasses that exist purely to batch together similar
 functionality and make it easier for developers to isolate the
 internal implementations of module functionality (such as configuring
 all the configuration files).  It's almost the same as developing
-functions in real languages, they exist to isolate functionality and
-enable safe refactoring without having to change other pieces of the
-system.
+functions in high-level programming languages, they exist to isolate
+functionality and enable safe refactoring without having to change
+other pieces of the system.
 
 Where possible, names of classes should be self-evident and organized
 underneath the public class.  For instance,
@@ -197,7 +189,7 @@ the specific install classes for both pieces.  We split out the server
 and client right at the start so that they can be individually
 managed.  The main client and server classes look like:
 
-```
+```puppet
 class ssh::client (
   $package_ensure = $ssh::params::client_package_ensure,
   $package_name   = $ssh::params::client_package_name,
@@ -230,7 +222,7 @@ Containment](http://docs.puppetlabs.com/puppet/latest/reference/lang_containment
 
 This leaves us with ::install classes that look like:
 
-```
+```puppet
 class ssh::client::install inherits ssh::client {
 
   if $caller_module_name != $module_name {
@@ -243,7 +235,9 @@ class ssh::client::install inherits ssh::client {
   }
 
 }
+```
 
+```puppet
 class ssh::server::install inherits ssh::server {
 
   if $caller_module_name != $module_name {
@@ -266,16 +260,16 @@ reference $package_ensure rather than having to pass the parameters
 into these classes.  Secondly, we explicitly mark these classes as
 being private with:
 
-```
+```puppet
   if $caller_module_name != $module_name {
     fail("Use of private class ${name} by ${caller_module_name}")
   }
 ```
 
 Which causes compilation of the Puppet catalog to fail if the class
-was included anywhere by in the scope of a class within the module.
+was included anywhere but in the scope of a class within the module.
 If you were to add ssh::server::install to site.pp or to the console
-of Puppet Enterprise it would immediately fail.
+of Puppet Enterprise it would fail.
 
 ###Managing the ssh service
 
@@ -286,7 +280,7 @@ such thing as a client service, so we would have needed to introduce
 logic to protect against managing the service if you were only trying
 to manage the client.
 
-```
+```puppet
 class ssh::server::service inherits ssh::server {
 
   if $caller_module_name != $module_name {
@@ -303,7 +297,7 @@ class ssh::server::service inherits ssh::server {
 
 We then need to modify our main ssh::server class to include this:
 
-```
+```puppet
 class ssh::server(
   $package_ensure            = $ssh::params::server_package_ensure,
   $package_name              = $ssh::params::server_package_name,
@@ -352,7 +346,7 @@ Now we wish to address the global ssh client configuration, which is
 stored in a file called ssh_config.  We first create a
 ssh::client::config class:
 
-```
+```puppet
 class ssh::client::config inherits ssh::client {
 
   if $caller_module_name != $module_name {
@@ -371,7 +365,7 @@ class ssh::client::config inherits ssh::client {
 We then modify the main ssh::client class to include these new
 parameters and this class:
 
-```
+```puppet
 class ssh::client (
   $config_ensure  = $ssh::params::client_config_ensure,
   $config_path    = $ssh::params::client_config_path,
@@ -396,7 +390,7 @@ entry, and then a number of indented parameters below that host entry.
 There’s a number of choices that can be made here as to how flexible
 to be with this module.  We may wish to allow you to set any number of
 hosts and their parameters, and we’d need to use defines and possibly
-puppetlabs-concat to do this.
+[puppetlabs-concat](https://forge.puppetlabs.com/puppetlabs/concat) to do this.
 
 For the purposes of this module we’ll exclusively manage ‘Host *’,
 parameters that apply to all hosts.  We’ll keep things simple by
@@ -410,7 +404,7 @@ managing the following things:
 
 This means our template will look like:
 
-```
+```erb
 ##
 ## Managed by Puppet
 ##
@@ -425,7 +419,7 @@ Host *
 
 We add these parameters to ssh::client, which becomes:
 
-```
+```puppet
   class ssh::client (
     $config_ensure           = $ssh::params::client_config_ensure,
     $config_path             = $ssh::params::client_config_path,
@@ -451,9 +445,9 @@ We add these parameters to ssh::client, which becomes:
 This is a simplified selection, and it raises the question of why we
 didn’t choose to manage all of the possible parameters for
 sshd_config.  There’s several answers here, but the most important is
-that a module with tens, or hundreds, of parameters is simply too
-unwieldy to use, or develop, and it becomes extremely difficult to
-maintain with time.  There’s several causes of too many parameters,
+that a module with tens or hundreds of parameters is simply too
+unwieldy to use or develop and it becomes extremely difficult to
+maintain with time.  There are several causes of too many parameters,
 but two that you are most likely to face are too broad of a module
 scope, or reliance on individual parameters rather than more
 sophisticated data handling.
@@ -490,7 +484,7 @@ expressible.
 
 To see this in action we can modify our ssh::client work as follows:
 
-```
+```puppet
   class ssh::client (
     $config_ensure           = $ssh::params::client_config_ensure,
     $config_path             = $ssh::params::client_config_path,
@@ -511,7 +505,7 @@ To see this in action we can modify our ssh::client work as follows:
 
 We need to modify the template next:
 
-```
+```erb
 ##
 ## Managed by Puppet
 ##
@@ -550,7 +544,7 @@ need to use nested hashes, just a single hash with entries for each
 parameter and their value.  We start by making the ssh::server::config
 class and modifying the ssh::server class to include it.
 
-```
+```puppet
 class ssh::server::config inherits ssh::server {
 
   if $caller_module_name != $module_name {
@@ -567,7 +561,9 @@ class ssh::server::config inherits ssh::server {
   }
 
 }
+```
 
+```puppet
 class ssh::server(
   $config_ensure             = $ssh::params::server_config_ensure,
   $config_path               = $ssh::params::server_config_path,
@@ -598,10 +594,10 @@ easier to provide data that differs per operating system in params.pp
 while letting you override the other sshd settings.
 
 Next we update params.pp to include all the new data.  This file has
-grown at this point to handle Redhat and Debian, as well as provide
+grown at this point to handle RedHat and Debian, as well as provide
 sensible defaults:
 
-```
+```puppet
 class ssh::params {
 
   # Server parameters
@@ -679,7 +675,7 @@ the values are an array, if so it repeats the parameter name and then
 the entry for each element of the array.  This means we can handle
 multiple hostkeys.
 
-```
+```erb
 ##
 ## Managed by Puppet
 ##
@@ -710,13 +706,18 @@ multiple hostkeys.
 
 This piece of the module is almost the same as the client
 configuration, but we need to be able to take in a user name to build
-out the appropriate configuration.  As a result this makes sense to
-write as a define instead of a class.
+out the appropriate configuration.  Since we can have multiple instantiations
+of the ssh::user configuration on a given node this needs to be a define not a
+class.
 
 We only need a few parameters here and we make the assumption that
 users live in /home, but you can see that the only real difference
 is that we allow the owner/group to be set for the file.  We reuse
 the same template as the previous ssh::client::config class.
+
+When writing a define, it's important to include "${name}" in the name of
+resources within the define so that you don't run into duplicate definition
+errors.
 
 ```puppet
 define ssh::user(
@@ -754,7 +755,7 @@ which you should use as the basis of your documentation as it contains all the
 appropriate sections to fill out.  In our case we'll document out the classes
 and defines we made.
 
-```
+```markdown
 #ssh
 
 ####Table of Contents
@@ -793,9 +794,7 @@ and clients.  It'll also allow you to configure per user configuration.
 
 In order to ensure sshd is running you just need to:
 
-```
 include ssh::server
-```
 
 ##Usage
 
