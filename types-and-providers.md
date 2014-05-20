@@ -12,7 +12,7 @@ Types and providers are preferred over execs and definitions due the ability to
 do things difficult within the Puppet DSL.  It's not possible to read the
 results of an exec{} and do different things based on that output.  They are
 also ideally suited for other forms of complex logic that is difficult to
-manage within the constraints of the DSL.  For instance,  a provider that
+manage within the constraints of the DSL.
 
 An example of this is a provider that manages local redis instances.  It would
 need to make an actual TCP connection to the database to retrieve the current
@@ -27,11 +27,11 @@ provider to support the creation of ssh tunnels, as well as SOCKS proxies.
 
 It would not be unusual to model something like ssh tunnels or SOCKS proxies
 within a definition in Puppet to allow the creation of multiple instances.  While
-this may work in the most simplistic of cases it usually breaks down in production
-quality modules due to the complexities of managing the underlying system state
-with the limitations of `exec{}`.  You cannot do sophisticated logic easily and
-are limited to chaining together `exec{}` resources to try and do various things
-based on exit codes and shell commands.
+this may work in the most simplistic of cases it usually breaks down in
+production-quality modules due to the complexities of managing the underlying
+system state with the limitations of `exec{}`.  You cannot do sophisticated
+logic easily and are limited to chaining together `exec{}` resources to try and
+do various things based on exit codes and shell commands.
 
 To most effectively model ssh tunnels and SOCKS proxies using types and
 providers, we must be able to:
@@ -79,7 +79,7 @@ In addition to the above problems the validation of the parameters
 would have to be done with various functions within the manifest.
 None of this is impossible, but you’d end up with a difficult to reuse
 define.  Moreover, it would be tied very specifically to the
-implementation and it would be difficult to extend it for various
+implementation and it would be difficult to extend it for
 different systems and use cases.
 
 As you’re reading the types and providers section you can correctly
@@ -99,6 +99,8 @@ is the best reference material available for writing types and
 providers.  It covers all the pieces of functionality we’ll use below
 in vastly more detail and is an invaluable guide.
 
+[TODO: I'd like at least some mention of the additional performance benefits of
+types/providers over defines/execs. Probably in this section]
 
 ###Intro to SSH Tunnels
 
@@ -121,16 +123,17 @@ forward traffic of all kinds:
 ssh -D 8080 user@remoteserver
 ```
 
-For further reading on SSH tunnels you can [TODO: find a resource]
+For further reading on SSH tunnels you can [TODO: find a resource] [COMMENT: maybe https://help.ubuntu.com/community/SSH/OpenSSH/PortForwarding?]
 
-##Type
+##Types
 
 Types represent the resource description.  They list out all the
 parameters that are required, their validation, any munging (forcing
 passed in parameters to conform to certain needs, like forcing
-everything to be lowercase.), or special casing of how the parameters
+everything to be lowercase), or special casing of how the parameters
 discovered on the system are compared to the required ones.  They are
-written in Ruby and placed in lib/puppet/type/type_name.rb. 
+written in Ruby and placed in
+${modulepath}/<module>/lib/puppet/type/type_name.rb. 
 
 In our ssh module, we’re going to write `ssh_tunnel`, a type that sets
 up tunnels.  We have two use cases we want to target for now, one is:
@@ -175,14 +178,8 @@ Puppet::Type.newtype(:ssh_tunnel) do
   @doc = 'Manage SSH tunnels'
 ```
 
-Type validations ACCOMPLISH X and SHOULD/MUST BE USED IN Z WAY/FOR Y PURPOSE.
-Validation has two sorts (I will fix that word later): regular  and global.
-Regular validation, referred to as simply 'validation', does/is used to X.
-Global validation does/is used to Y. Best practices HAS SOME THOUGHTS ABOUT
-WHAT'S BEST.
-
 Type validations allow you to verify that the contents of your
-resource parameters conform to various validation rules.  There are
+resource parameters conform to various rules.  There are
 two sorts of validation, parameter and global.  Parameter validation,
 referred to as simply 'validation' is for inspecting and verifying the
 contents of a single parameter.  Global validation can be used to
@@ -219,13 +216,19 @@ validation handling.
   ensurable
 ```
 
-Next, we create our first “parameter”.  Puppet distinguishes between
-properties and parameters, and the difference is just that properties
-can be managed and discovered from the system, whereas parameters
-aren’t discoverable and can’t be managed. [COMMENT] In our type the name is
-really not something you “manage” on the local system, it’s just a
-reference point for Puppet.  That means it’s a parameter, not a
-property.
+Next, we create our first parameter.  Puppet distinguishes between properties
+and parameters, and the difference is that properties map directly to
+something measurable on the target system, whereas parameters map to something
+that affects how Puppet manages the resource but is not necessarily measurable
+on the system.  Additionally, only properties can result in methods getting called in the provider.  For example, in our ssh_tunnel type the name of the tunnel
+isn't something managed on the target system, it's just a reference point for
+Puppet.  That means it's a parameter, not a property.
+
+```
+  newparam(:name, :namevar => true) do
+    desc "The SSH tunnel name, must be unique."
+  end
+```
 
 In order to allow this type to work with `puppet resource` we’ll need
 to define some way for Puppet to automatically name discovered
@@ -243,17 +246,14 @@ It'll then translate that into an appropriate name value such as:
 ssh_tunnel { ‘8080:localhost:80-user@remote’: }
 ```
 
+[TODO: where's the example for how we tell Puppet to auto-name discoverd
+resources?]
+
 This is a little clumsy but we need the name to be unique, and
 changing any of the information about the tunnel means it’s a
 completely new one.  For other kinds of resources it’s easier to
 provide a short and memorable name, as only the properties change and
-there’s a static name to refer to (like package{}).
-
-```
-  newparam(:name, :namevar => true) do
-    desc "The SSH tunnel name, must be unique."
-  end
-```
+there’s a static name to refer to (like user{}).
 
 Our first property introduces ‘newvalues()’ and ‘defaultto()’.  These
 methods are some of the helpers Puppet contains to make it easier to
@@ -355,7 +355,7 @@ tunnels.  We do this by calling a method we haven't written yet,
 discover it on the server.  We'll write this later.
 
 Once we've discovered each of the processes we'll split the string into
-various pieces and use those to call new() which all the properties that
+various pieces and use those to call new() with all the properties that
 were returned from ssh_processes.  We'll build an array of all these
 new() calls and return that to Puppet as the list of instances we found.
 
