@@ -222,7 +222,7 @@ validation handling.
 Next, we create our first “parameter”.  Puppet distinguishes between
 properties and parameters, and the difference is just that properties
 can be managed and discovered from the system, whereas parameters
-aren’t discoverable and can’t be managed.  In our type the name is
+aren’t discoverable and can’t be managed. [COMMENT] In our type the name is
 really not something you “manage” on the local system, it’s just a
 reference point for Puppet.  That means it’s a parameter, not a
 property.
@@ -277,7 +277,7 @@ Our next property demonstrates an alternative, more sophisticated, use
 of validation.  In validate we’re binding the value passed into
 validate to the variable ‘port’, making it available for checking
 within.  If you were to pass an array to local_port it would iterate
-over that array and pass each element to validate.
+over that array and pass each element to validate. [COMMENT]
 
 Inside the block you can do whatever ruby code you like.  We’re trying
 to verify that port can be converted to an integer and then tested to
@@ -300,7 +300,7 @@ Error: Could not run: Parameter local_port failed on Ssh_tunnel[8080-test@localh
 ```
 
 The rest of our properties are all similar to the above explanations,
-so we won’t explain these further.
+so we won’t explain these further [COMMENT].
 
 ```
   newproperty(:forward_port) do
@@ -336,8 +336,8 @@ abstraction has a benefit.
 We start our provider by creating the Puppet::Type definition with
 .provide(:ssh) added.  We also set up a command.  Behind the scenes
 this finds appropriate executables within the system path.  It does so
-in a generic, cross operating system, way so this works for Linux or
-Windows:
+in a generic, cross-operating-system way so this works for Linux or
+Windows [COMMENT]:
 
 ```
 Puppet::Type.type(:ssh_tunnel).provide(:ssh) do
